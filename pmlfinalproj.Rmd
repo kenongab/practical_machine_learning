@@ -1,0 +1,34 @@
+---
+title: "PracticalMachineLearning"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(caret)
+set.seed(12345)
+```
+
+## Introduction
+
+## Exploratory Data Analysis and Cleaning
+The dataset was composed of 19622 observations of 160 variables. An inspection of the data showed that around 6 of these variables were identification data, 1 was for time tracking, and 9 were filled with #DIV/0 errors. These variables were discarded. The dataset was filled with NA values arising probably from the non-stimulation of sensors from a certain activity. These NA values were imputed with zeroes to prevent errors from the training functions.
+```{r data_cleaning}
+trainset <- read.csv("pml-training.csv")
+trainset2 <- data.frame(apply(trainset, 2, function(x) as.numeric(as.character(x))))
+trainset2[is.na(trainset2)] <- 0
+trainset2 <- trainset2[7:159]
+zeroes <- apply(trainset2, 2, sum)
+trainset3 <- trainset2[,which(zeroes != 0)]
+trainset3 <- cbind(trainset3, classe = trainset$classe)
+```
+
+##Fitting the Model
+With a large number of features available and limited computational power, a principal component analysis was performed on a random sampling of 2000 samples without replacement. The PCA was done to reduce the features of the data and the sampling was to save on computing time. A reliable model for classification problems, a boosted model with trees was chosen and implemented through the caret gbm method with settings on default. A 5-fold cross-validation scheme was performed to test the accuracy of the model on unseen data. A k-fold cross-validation was chosen since it gives a relatively low bias estimate without too high a variance. A k=5 was chosen as this number is widely regarded as having an acceptable bias-variance tradeoff.
+```{r model_fit}
+sampled <- trainset3[sample(1:19622, 2000, replace = FALSE),]
+modFit <- train(classe ~., data = sampled, method = "gbm", verbose = FALSE, preProcess = "pca",trControl = trainControl(method = "cv", number = 5))
+modFit
+```
+
+The model is estimated to have an accuracy of about 75%.
